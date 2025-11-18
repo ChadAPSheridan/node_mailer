@@ -1,8 +1,8 @@
 
 require('dotenv').config();
 const express = require('express');
-const {Client} = require('@microsoft/microsoft-graph-client');
-const {ClientSecretCredential} = require('@azure/identity');
+const { Client } = require('@microsoft/microsoft-graph-client');
+const { ClientSecretCredential } = require('@azure/identity');
 const fs = require('fs');
 const path = require('path');
 
@@ -21,8 +21,7 @@ function getGraphClient() {
   return Client.initWithMiddleware({
     authProvider: {
       getAccessToken: async () => {
-        const token =
-            await credential.getToken('https://graph.microsoft.com/.default');
+        const token = await credential.getToken('https://graph.microsoft.com/.default');
         return token.token;
       }
     }
@@ -42,67 +41,59 @@ function logToFile(message) {
 function authenticateApiKey(req, res, next) {
   const key = req.headers['x-api-key'];
   if (!key || key !== apiKey) {
-    logToFile(
-        `Unauthorized access attempt from IP: ${req.ip}, Key received: ${key}`);
-    return res.status(401).json({error: 'Unauthorized'});
+    logToFile(`Unauthorized access attempt from IP: ${req.ip}, Key received: ${key}`);
+    return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 }
 
 app.post('/send-email', authenticateApiKey, async (req, res) => {
-  const {to, subject, body, cc, bcc, replyTo, attachments, bodyType} = req.body;
+  const { to, subject, body, cc, bcc, replyTo, attachments, bodyType } = req.body;
   console.log('Request body:', req.body);
-  console.log(
-      'To:', to, ', Subject:', subject, ', Body:', body, ', CC:', cc,
-      ', BCC:', bcc, ', Reply-To:', replyTo, ', Attachments:', attachments,
-      ', Body Type:', bodyType);
+  console.log('To:', to, ", Subject:", subject, ", Body:", body, ", CC:", cc, ", BCC:", bcc, ", Reply-To:", replyTo, ", Attachments:", attachments, ", Body Type:", bodyType);
   if (!to || !subject || !body) {
     logToFile(`Bad request: Missing required fields from IP: ${req.ip}`);
-    return res.status(400).json({error: 'Missing required fields.'});
+    return res.status(400).json({ error: 'Missing required fields.' });
   }
   try {
     const client = getGraphClient();
     const message = {
       subject,
-      body: {contentType: bodyType === 'HTML' ? 'HTML' : 'Text', content: body},
-      toRecipients: [{emailAddress: {address: to}}]
+      body: {
+        contentType: bodyType === 'HTML' ? 'HTML' : 'Text',
+        content: body
+      },
+      toRecipients: [{ emailAddress: { address: to } }]
     };
     if (cc) {
       const ccList = Array.isArray(cc) ? cc : cc.split(',').map(e => e.trim());
-      message.ccRecipients =
-          ccList.map(addr => ({emailAddress: {address: addr}}));
+      message.ccRecipients = ccList.map(addr => ({ emailAddress: { address: addr } }));
     }
     if (bcc) {
-      const bccList =
-          Array.isArray(bcc) ? bcc : bcc.split(',').map(e => e.trim());
-      message.bccRecipients =
-          bccList.map(addr => ({emailAddress: {address: addr}}));
+      const bccList = Array.isArray(bcc) ? bcc : bcc.split(',').map(e => e.trim());
+      message.bccRecipients = bccList.map(addr => ({ emailAddress: { address: addr } }));
     }
     if (replyTo) {
-      const replyToList = Array.isArray(replyTo) ?
-          replyTo :
-          replyTo.split(',').map(e => e.trim());
-      message.replyTo =
-          replyToList.map(addr => ({emailAddress: {address: addr}}));
+      const replyToList = Array.isArray(replyTo) ? replyTo : replyTo.split(',').map(e => e.trim());
+      message.replyTo = replyToList.map(addr => ({ emailAddress: { address: addr } }));
     }
     if (attachments && Array.isArray(attachments)) {
-      message.attachments = attachments.map(
-          att => ({
-            '@odata.type': '#microsoft.graph.fileAttachment',
-            name: att.name,
-            contentBytes: att.contentBytes,
-            contentType: att.contentType || 'application/octet-stream'
-          }));
+      message.attachments = attachments.map(att => ({
+        '@odata.type': '#microsoft.graph.fileAttachment',
+        name: att.name,
+        contentBytes: att.contentBytes,
+        contentType: att.contentType || 'application/octet-stream'
+      }));
     }
-    await client.api('/users/' + senderEmail + '/sendMail').post({message});
-    res.json({success: true});
+    await client.api('/users/' + senderEmail + '/sendMail').post({ message });
+    res.json({ success: true });
   } catch (err) {
     logToFile(`Error sending email: ${err.message} from IP: ${req.ip}`);
-    res.status(500).json({error: err.message});
+    res.status(500).json({ error: err.message });
   }
 });
-
-app.listen(process.env.PORT || 3000, () => {
-  logToFile(`API server started on port ${process.env.PORT || 3000}`);
-  console.log(`API server running on port ${process.env.PORT || 3000}`);
+let port = process.env.PORT || 3000;
+app.listen(port, () => {
+  logToFile('API server started on port '+port);
+  console.log('API server running on port '+port);
 });
