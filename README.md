@@ -3,24 +3,28 @@
 This project provides a REST API to send emails using Microsoft Office 365 via the Microsoft Graph API. It uses Express for the server and authenticates using Azure AD credentials (tenant id, client id, client secret).
 
 ## Requirements
+
 - API key authentication (`x-api-key` header required)
 - Environment variables for Azure and API key
 
 ## Features
+
 - POST endpoint to send email
 - Uses Microsoft Graph API
 - Secure authentication with Azure credentials
 
 ## Setup
+
 1. Install dependencies: `npm install`
 2. Create a `.env` file with your Azure credentials and API key:
-  - TENANT_ID
-  - CLIENT_ID
-  - CLIENT_SECRET
-  - SENDER_EMAIL
-  - API_KEY
-3. Start the server: `npm start`
 
+- TENANT_ID
+- CLIENT_ID
+- CLIENT_SECRET
+- SENDER_EMAIL
+- API_KEY
+
+3. Start the server: `npm start`
 
 ## Notes
 
@@ -30,19 +34,27 @@ This project provides a REST API to send emails using Microsoft Office 365 via t
 No build step is required. Run with `npm start` or `node index.js`.
 
 ## Persistent Server Setup
+
 ### 1. Complete steps 1 and 2 in the [Setup](#setup) section
+
 ### 2. Install the [pm2](https://pm2.keymetrics.io/) server
+
 ```shell
 sudo npm install -g pm2
 ```
-### 3. Start the static server with PM2:
+
+### 3. Start the static server with PM2
+
    ```zsh
    pm2 start serve --name nodeMailer -- -s dist -l 3000
    ```
+
 ##### *Optionally with a config file:*
+
 1. Create the config file
 
 ***pm2.config.json:***
+
 ```json
 {
   "apps": [
@@ -58,25 +70,30 @@ sudo npm install -g pm2
   ]
 }
 ```
+
 * <font color=red>*Please note: Adding an env parameter to pm2.config.json will override the corresponding values from your .env file for any variables specified in the env block. PM2 sets these environment variables when starting the process, and they take precedence over those loaded from .env by libraries like dotenv.*
 
   *Variables not specified in env will still be loaded from .env if your app uses dotenv.*
 </font>
+
 2. run the following as root:
+
 ```zsh
 pm2 start pm2.config.json
 ```
-   - `-s dist` tells `serve` to serve the `dist` folder (the Vite build output).
-   - `-l 3000` sets the port (change if needed).
 
-### 4. To make PM2 auto-start on reboot:
+- `-s dist` tells `serve` to serve the `dist` folder (the Vite build output).
+- `-l 3000` sets the port (change if needed).
+
+### 4. To make PM2 auto-start on reboot
+
    ```zsh
    pm2 save
    pm2 startup
    ```
 
-
 ## Usage
+
 Send a POST request to `/send-email` with JSON body:
 
 ```
@@ -99,9 +116,12 @@ Send a POST request to `/send-email` with JSON body:
 ```
 
 **Note:**
+
+- `to` also accepts an array or a comma-separated string. All recipient fields trim whitespace and ignore empty entries, including trailing commas.
+- `to` must contain at least one recipient. Invalid recipient field types return HTTP 400; Microsoft Graph still validates addresses and recipient resolution.
 - `cc`, `bcc`, and `replyTo` can be either arrays or comma-separated strings. Both formats are accepted:
   - Array: `["cc1@example.com", "cc2@example.com"]`
-  - String: "cc1@example.com,cc2@example.com"
+  - String: "<cc1@example.com>,<cc2@example.com>"
 - The API requires the `x-api-key` header in all requests.
 - The examples below assume the server is running on port 3000,
 
@@ -118,10 +138,10 @@ To send an HTML email, set `bodyType` to `HTML` and provide your HTML content in
 }
 ```
 
-
 ## Full Code Samples for Sending Email with Attachment
 
 ### PHP
+
 ```php
 $file = 'test.txt';
 $content = base64_encode(file_get_contents($file));
@@ -160,6 +180,7 @@ echo $response;
 ```
 
 ### Bash Script
+
 ```bash
 file="test.txt"
 content=$(base64 -w 0 "$file")
@@ -179,6 +200,7 @@ curl -X POST http://localhost:3000/send-email \
 ```
 
 ### Java
+
 ```java
 import java.io.*;
 import java.net.*;
@@ -222,6 +244,7 @@ public class SendEmail {
 ```
 
 ### TypeScript
+
 ```typescript
 import { readFileSync } from 'fs';
 import fetch from 'node-fetch';

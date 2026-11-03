@@ -47,6 +47,19 @@ function authenticateApiKey(req, res, next) {
   next();
 }
 
+function normalizeRecipients(value, field) {
+  if (value === undefined || value === null) return [];
+  const values = Array.isArray(value) ? value : [value];
+  if (values.some(address => typeof address !== 'string')) {
+    throw new TypeError(`${field} must be a string or an array of strings.`);
+  }
+  return values
+    .flatMap(address => address.split(','))
+    .map(address => address.trim())
+    .filter(Boolean)
+    .map(address => ({ emailAddress: { address } }));
+}
+
 app.post('/send-email', authenticateApiKey, async (req, res) => {
   const { to, subject, body, cc, bcc, replyTo, attachments, bodyType } = req.body;
   console.log('Request body:', req.body);
@@ -54,6 +67,19 @@ app.post('/send-email', authenticateApiKey, async (req, res) => {
   if (!to || !subject || !body) {
     logToFile(`Bad request: Missing required fields from IP: ${req.ip}`);
     return res.status(400).json({ error: 'Missing required fields.' });
+  }
+  let toRecipients, ccRecipients, bccRecipients, replyToRecipients;
+  try {
+    toRecipients = normalizeRecipients(to, 'to');
+    ccRecipients = normalizeRecipients(cc, 'cc');
+    bccRecipients = normalizeRecipients(bcc, 'bcc');
+    replyToRecipients = normalizeRecipients(replyTo, 'replyTo');
+    if (!toRecipients.length) {
+      throw new TypeError('to must contain at least one recipient.');
+    }
+  } catch (err) {
+    logToFile(`Bad request: ${err.message} from IP: ${req.ip}`);
+    return res.status(400).json({ error: err.message });
   }
   try {
     const client = getGraphClient();
@@ -63,19 +89,16 @@ app.post('/send-email', authenticateApiKey, async (req, res) => {
         contentType: bodyType === 'HTML' ? 'HTML' : 'Text',
         content: body
       },
-      toRecipients: [{ emailAddress: { address: to } }]
+      toRecipients
     };
-    if (cc) {
-      const ccList = Array.isArray(cc) ? cc : cc.split(',').map(e => e.trim());
-      message.ccRecipients = ccList.map(addr => ({ emailAddress: { address: addr } }));
+    if (ccRecipients.length) {
+      message.ccRecipients = ccRecipients;
     }
-    if (bcc) {
-      const bccList = Array.isArray(bcc) ? bcc : bcc.split(',').map(e => e.trim());
-      message.bccRecipients = bccList.map(addr => ({ emailAddress: { address: addr } }));
+    if (bccRecipients.length) {
+      message.bccRecipients = bccRecipients;
     }
-    if (replyTo) {
-      const replyToList = Array.isArray(replyTo) ? replyTo : replyTo.split(',').map(e => e.trim());
-      message.replyTo = replyToList.map(addr => ({ emailAddress: { address: addr } }));
+    if (replyToRecipients.length) {
+      message.replyTo = replyToRecipients;
     }
     if (attachments && Array.isArray(attachments)) {
       message.attachments = attachments.map(att => ({
