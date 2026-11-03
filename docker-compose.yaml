@@ -1,0 +1,13 @@
+services:
+  nodemailer:
+    image: keymetrics/pm2:latest-alpine
+    container_name: nodemailer_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "9942:9942"
+    env_file:
+      - .env
+    command: ["pm2-runtime", "start", "pm2.config.json"]

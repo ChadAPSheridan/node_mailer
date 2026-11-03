@@ -1,0 +1,8 @@
+{
+  "apps": [
+    {
+      "name": "nodeMailer",
+      "script": "./nodeMailer/index.js"
+    }
+  ]
+}
